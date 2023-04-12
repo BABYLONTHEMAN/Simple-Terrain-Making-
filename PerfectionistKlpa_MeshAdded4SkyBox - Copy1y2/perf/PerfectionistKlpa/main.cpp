@@ -24,7 +24,17 @@ using namespace std;
 // const GLuint WIDTH = 800, HEIGHT = 600;
 
 // Camera variables
-
+glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 camera_front = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
+GLfloat camera_speed = 5.0f;
+GLfloat camera_yaw = -90.0f;
+GLfloat camera_pitch = 0.0f;
+GLfloat camera_sensitivity = 0.1f;
+GLfloat camera_zoom = 45.0f;
+bool keys[1024];
+GLfloat delta_time = 0.0f;
+GLfloat last_frame = 0.0f;
 ////////////////
 /// <rotate>
 
@@ -98,6 +108,7 @@ using namespace std;
 /// <re</class camera>
 /// 
 bool jwla = false;
+bool jwla2 = false;
 
 
 	void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -166,6 +177,18 @@ int main() {
 				glm::vec3(0.5f, 0.0f, 0.5f), // target position
 				glm::vec3(1.0f, 5.0f, 1.0f)  // up vector
 			);
+			viewMatrix * viewMatrix;
+		}
+		if (jwla2)
+		{
+			axis = glm::vec3(0.5f, 1.0f, 0.5f);
+			rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis);
+			viewMatrix = glm::lookAt(
+				glm::vec3(0.9f, 2.5f, 0.6f), // camera position
+				glm::vec3(0.5f, 2.0f, 0.5f), // target position
+				glm::vec3(1.0f, 3.0f, 1.0f)  // up vector
+			);
+			viewMatrix* viewMatrix;
 		}
 
 		glm::mat4 model(1.0f);
@@ -202,6 +225,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		
 		if (key == GLFW_KEY_W) {
 			jwla = true;
+			jwla2 = false;
+		}
+		if (key == GLFW_KEY_S) {
+			jwla2 = true;
+			jwla = false;
+
 		}
 	}
 	
