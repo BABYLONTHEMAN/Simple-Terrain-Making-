@@ -109,12 +109,162 @@ GLfloat last_frame = 0.0f;
 /// 
 bool jwla = false;
 bool jwla2 = false;
+bool sarawa = false;
+GLfloat 	deltaTime = 0.0f;
+GLfloat 	lastTime = 0.0f;
+//////////////////////////////*****************************************************************************************
+// Camera h
 
+class Camera
+{
+public:
+	Camera();
+	Camera(glm::vec3 startPosition, glm::vec3 startUp, GLfloat startYaw, GLfloat startPitch, GLfloat startMoveSpeed, GLfloat startTurnSpeed);
+	void keyControl(bool* keys, GLfloat deltaTime);
+	void mouseControl(GLfloat Xchange, GLfloat Ychange);
+
+	glm::vec3 getCameraPosition();
+	glm::vec3 getCameraDirection();
+	glm::mat4 calculateViewMatrix();
+
+
+
+	~Camera();
+
+private:
+	glm::vec3 position;
+	glm::vec3 front;
+	glm::vec3 up;
+	glm::vec3 right;
+	glm::vec3 worldUp;
+
+	GLfloat yaw;
+	GLfloat pitch;
+
+	GLfloat moveSpeed;
+	GLfloat turnSpeed;
+	void Update();
+};
+
+//////////////////////////////*****************************************************************************************
+// Camera Cpp
+
+Camera::Camera() {}
+
+Camera::Camera(glm::vec3 startPosition, glm::vec3 startUp, GLfloat startYaw, GLfloat startPitch, GLfloat startMoveSpeed, GLfloat startTurnSpeed)
+{
+	position = startPosition;
+	worldUp = startUp;
+	yaw = startYaw;
+	pitch = startPitch;
+	front = glm::vec3(0.0f, 0.0f, -1.0f);
+	moveSpeed = startMoveSpeed;
+	turnSpeed = startTurnSpeed;
+
+	Update();
+}
+/////////////
+void Camera::keyControl(bool* keys, GLfloat deltaTime)
+{
+	//delta time is toslow down frames in games otherwise have 10k frame per second
+	GLfloat velocity = moveSpeed * deltaTime;
+
+	if (keys[GLFW_KEY_W])
+	{
+		position += front * velocity;
+	}
+	if (keys[GLFW_KEY_S])
+	{
+		position -= front * velocity;
+	}
+	if (keys[GLFW_KEY_A])
+	{
+		position -= right * velocity;
+	}
+	if (keys[GLFW_KEY_D])
+	{
+		position += right * velocity;
+	}
+	if (keys[GLFW_KEY_R]) //rotate 
+	{
+		sarawa = true;
+	}
+	if (keys[GLFW_KEY_F]) //reset rotate
+	{
+		sarawa = false;
+	}
+}
+
+void Camera::mouseControl(GLfloat Xchange, GLfloat Ychange)
+{
+	Xchange *= turnSpeed;
+	Ychange *= turnSpeed;
+	yaw += Xchange;
+	pitch += Ychange;
+
+	if (pitch > 89.0f)
+	{
+		pitch = 89.0f;
+
+	}
+	if (pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	Update();
+}
+
+glm::mat4 Camera::calculateViewMatrix()
+{
+
+	return glm::lookAt(position, position + front, up); //lookAt functioneka wata bnwara :)
+
+
+}
+//////////////
+///vec3 for shininess and stuff specular lighting 
+glm::vec3 Camera::getCameraPosition()
+{
+	return position; // hold that position and pass it into our shader , now we go to shader vert ...
+}
+//////////////
+glm::vec3 Camera::getCameraDirection()
+{
+	return glm::normalize(front);
+}
+
+//////////////
+void Camera::Update()
+{
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front = glm::normalize(front);
+
+	right = glm::normalize(glm::cross(front, worldUp));
+	up = glm::normalize(glm::cross(right, front));
+}
+
+Camera::~Camera()
+{
+}
+
+////////
+Camera camera;
+///////
+/*
+ Window mainWindow; //for other projects
+mainWindow = Window(1920, 1080); //1280 , 1024 or 1024, 768 mainWindow = Window(1366, 768); //this line is inside int main
+
+*/
+//GLFWwindow* mainWindow;
+Window mainWindow; //for other projects
 
 	void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 int main() {
-
+	mainWindow = Window(1920, 1080); //1280 , 1024 or 1024, 768 mainWindow = Window(1366, 768);
 	if (!glfwInit()) {
 		std::cerr << "Failed to initialize GLFW\n";
 		return -1;
@@ -126,6 +276,12 @@ int main() {
 		glfwTerminate();
 		return -1;
 	}
+	//_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-__________camera movement
+	camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -60.0f, 0.0f, 5.0f, 0.5f);
+
+	camera.keyControl(mainWindow.getsKeys(), deltaTime);
+	camera.mouseControl(mainWindow.getXchange(), mainWindow.getYchange());
+	//_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 	glfwMakeContextCurrent(window);
 
@@ -143,7 +299,9 @@ int main() {
 	HeightmapTerrain terrain("heightmap.png", 256, 10.0f);
 	//HeightmapTerrain terrain("irelandHeightMap01.raw", 255, 10.0f);
 
-
+	GLuint uniformProjection = 0, uniformModel = 0, uniformView = 0, uniformEyePosition = 0,
+		//uniformAmbientIntensity = 0, uniformAmbientColour = 0, uniformDirection = 0, uniformDiffuseintensity = 0,
+		uniformSpecularIntensity = 0, uniformShininess = 0;
 
 	while (!glfwWindowShouldClose(window)) {
 		glClearColor(1.0f, 0.0f, 0.5f, 1.0f);
@@ -156,6 +314,11 @@ int main() {
 		glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), 80.0f / 60.0f, 0.1f, 100.0f);
 		//glMatrixMode(GL_PROJECTION);
 		glLoadMatrixf(glm::value_ptr(projectionMatrix));
+		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(camera.calculateViewMatrix()));
+		glUniform3f(uniformEyePosition, camera.getCameraPosition().x, camera.getCameraPosition().y,
+			camera.getCameraPosition().z);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//*********************************************************************************
 
 		glm::mat4 viewMatrix = glm::lookAt(
